@@ -1,4 +1,5 @@
-def control_wash_normal(action: str):
+
+def dishwasher_normal(action: str):
     """
     Control the normal wash setting of the Dishwasher.
 
@@ -16,7 +17,7 @@ def control_wash_normal(action: str):
         return "Invalid action. Please specify 'on' or 'off'."
 
 
-def control_wash_quick(action: str):
+def dishwasher_quick(action: str):
     """
     Control the quick wash setting of the Dishwasher.
 
@@ -34,7 +35,7 @@ def control_wash_quick(action: str):
         return "Invalid action. Please specify 'on' or 'off'."
 
 
-def control_wash_delicate(action: str):
+def dishwasher_delicate(action: str):
     """
     Control the delicate wash setting of the Dishwasher.
 
@@ -50,4 +51,3 @@ def control_wash_delicate(action: str):
         return "Delicate wash setting turned off."
     else:
         return "Invalid action. Please specify 'on' or 'off'."
-
