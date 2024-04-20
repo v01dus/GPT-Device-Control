@@ -21,7 +21,16 @@ tools = [
         "properties": {
             "device": {
                 "type": "string",
-                "description": "Device name"
+                "description": "Device name",
+                "enum": ["Kitchen Light",
+                        "Bedroom Light",
+                        "Refrigerator",
+                        "Dishwasher",
+                        "Vacuum Bot",
+                        "Nature Hub",
+                        "Storage Light",
+                        "Electric Kettle",
+                        "Air Purifier"]
             },
             "command": {
                 "type": "object",
@@ -62,29 +71,88 @@ tools = [
                         
 
 SYSTEM_PROMPT = """You are an intelligent AI that controls smart home devices. Given a command or request from the user,
-call one of your functions to complete the request. If the request cannot be completed by your available functions or the request is ambiguous or unclear, reject the request."""
-
+call one of your functions to complete the request. If the request cannot be completed by your available functions. Ask for clarification if a user request is ambiguous."""
 
 
 def control_device(device, idx, type_, val):
+    # Kitchen Light
+    if device == "Kitchen Light":
+        if idx in ["L1"]:
+            if type_ == "0x81" and val == 1:
+                return f"Turned on the {device} at {idx}"
+            elif type_ == "0x80" and val == 0:
+                return f"Turned off the {device} at {idx}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
     
-    if device == "Kitchen Light" or device == "Bedroom Light":
-        if type_ == "0x81" and val == 1:
-            return f"Turned on the {device}"
-        elif type_ == "0x80" and val == 0:
-            return f"Turned off the {device}"
+    # Bedroom Light
+    elif device == "Bedroom Light":
+        if idx in ["L1", "L2"]:
+            if type_ == "0x81" and val == 1:
+                return f"Turned on the {device} at {idx}"
+            elif type_ == "0x80" and val == 0:
+                return f"Turned off the {device} at {idx}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
+    
+    # Refrigerator
     elif device == "Refrigerator":
-        if type_ == "0x81" and val == 1:
-            return "Started power saving mode for the refrigerator"
-        elif type_ == "0x80" and val == 0:
-            return "Stopped power saving mode for the refrigerator"
-    elif device == "Dishwasher":
-        if type_ == "0x81" and val == 1:
-            return "Started quick wash on the dishwasher"
-        elif type_ == "0x80" and val == 0:
-            return "Stopped quick wash on the dishwasher"
+        if idx in ["L1", "L2"]:
+            if type_ == "0x81" and val == 1:
+                return f"Started power saving mode for the {device} at {idx}"
+            elif type_ == "0x80" and val == 0:
+                return f"Stopped power saving mode for the {device} at {idx}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
     
-    return "Invalid device or command"
+    # Dishwasher
+    elif device == "Dishwasher":
+        if idx in ["L1", "L2", "L3"]:
+            if type_ == "0x81" and val == 1:
+                return f"Started wash cycle '{idx}' on the {device}"
+            elif type_ == "0x80" and val == 0:
+                return f"Stopped wash cycle '{idx}' on the {device}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
+
+    elif device == "Vacuum Bot":
+        # Example command for Vacuum Bot
+        if idx in ["L1", "L2", "L3"]:
+            if type_ == "0x81" and val == 1:
+                return f"Started vacuum mode '{idx}' on the {device}"
+            elif type_ == "0x80" and val == 0:
+                return f"Stopped vacuum mode '{idx}' on the {device}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
+    
+    elif device == "Storage Light":
+        if idx in ["L1"]:
+            if type_ == "0x81" and val == 1:
+                return f"Turned on the {device} at {idx}"
+            elif type_ == "0x80" and val == 0:
+                return f"Turned off the {device} at {idx}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
+    
+    elif device == "Electric Kettle":
+        if idx in ["L1", "L2"]:
+            if type_ == "0x81" and val == 1:
+                return f"Started boiling mode '{idx}' on the {device}"
+            elif type_ == "0x80" and val == 0:
+                return f"Stopped boiling mode '{idx}' on the {device}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
+    
+    elif device == "Air Purifier":
+        if idx in ["L1", "L2", "L3"]:
+            if type_ == "0x81" and val == 1:
+                return f"Started purifier mode '{idx}' on the {device}"
+            elif type_ == "0x80" and val == 0:
+                return f"Stopped purifier mode '{idx}' on the {device}"
+        else:
+            return f"Invalid index '{idx}' for {device}"
+        
+    
 
 def reject_request():
     
@@ -112,18 +180,35 @@ def ask_function_calling(query):
         messages.append(response_message)
         for tool_call in tool_calls:
             function_name = tool_call.function.name
-            function_to_call = available_functions[function_name]
+            function_to_call = available_functions.get(function_name)
+            if function_to_call is None:
+                # If function is not found, call reject_request
+                reject_response = reject_request()
+                messages.append(
+                    {
+                        "role": "tool",
+                        "name": "reject_request",
+                        "content": reject_response,
+                    }
+                )
+                continue
+            
             function_args = json.loads(tool_call.function.arguments)
 
             # Extract device, idx, type_, val from the command argument
-            device = function_args["device"]
-            command = function_args["command"]
-            idx = command["idx"]
-            type_ = command["type"]
-            val = command["val"]
+            device = function_args.get("device")
+            command = function_args.get("command", {})
+            idx = command.get("idx")
+            type_ = command.get("type")
+            val = command.get("val")
 
-            function_response = function_to_call(device, idx, type_, val)
-
+            if function_name == "reject_request":
+                # If calling reject_request, do not pass any arguments
+                function_response = function_to_call()
+            else:
+                function_response = function_to_call(device, idx, type_, val)
+                
+           
             messages.append(
                 {
                     "tool_call_id": tool_call.id,
@@ -133,8 +218,10 @@ def ask_function_calling(query):
                 }
             )
 
-        return response
+    return response
 
-# Test the updated ask_function_calling function
-user_query = "refrigerator on saving mode"
+
+
+user_query = "vacuum in mode 2, after you are done turn off the vacuum cleaner"
 print(ask_function_calling(user_query))
+
